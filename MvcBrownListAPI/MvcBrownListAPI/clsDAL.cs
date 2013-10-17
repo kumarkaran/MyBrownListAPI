@@ -126,7 +126,7 @@ namespace MvcBrownListAPI
                     if (cnn.State == ConnectionState.Closed)
                         cnn.Open();
 
-                    cmd = new SqlCommand("sp_CreateAccount", cnn);
+                    cmd = new SqlCommand("sp_Account_New", cnn);
                     cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.AddWithValue("@firstname", userDetail.FirstName);
                     cmd.Parameters.AddWithValue("@lastname", userDetail.LastName);
@@ -265,7 +265,7 @@ namespace MvcBrownListAPI
                 if (cnn.State == ConnectionState.Closed)
                     cnn.Open();
 
-                cmd = new SqlCommand("sp_DeleteAccount", cnn);
+                cmd = new SqlCommand("sp_Account_Delete", cnn);
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@id", id);
 
@@ -322,7 +322,7 @@ namespace MvcBrownListAPI
                     if (cnn.State == ConnectionState.Closed)
                         cnn.Open();
 
-                    cmd = new SqlCommand("sp_CreateNewComplaint", cnn);
+                    cmd = new SqlCommand("sp_Complaint_New", cnn);
                     cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.AddWithValue("@accountId", complaintDetail.AccountId);
                     cmd.Parameters.AddWithValue("@entityId", complaintDetail.EntityId);
@@ -353,12 +353,12 @@ namespace MvcBrownListAPI
                         requestStatus.Data = complaintInsertId.ToString();
                         requestStatus.Message = AppConstants.SUCCESS_MESSAGE;
 
-                        //New Posting - it must have a Posting (of type 3 [solution]) with it
-                        cmd = new SqlCommand("sp_CreateNewPosting", cnn);
+                        //New Posting - it must have a Posting (of type 1 [solution]) with it
+                        cmd = new SqlCommand("sp_Posting_New", cnn);
                         cmd.CommandType = CommandType.StoredProcedure;
-                        cmd.Parameters.AddWithValue("@postingType", 3);
+                        cmd.Parameters.AddWithValue("@postingType", 1); //1 - solution, 2 - Comment, 3 - Response
                         cmd.Parameters.AddWithValue("@complaintId", complaintInsertId);
-                        cmd.Parameters.AddWithValue("@parentPostingId", 1); //not sure //postingDetail.ParentPostingId
+                        cmd.Parameters.AddWithValue("@parentPostingId", DBNull.Value); //If it is null, that means the comment/posting is associated with a complaint (complaint_id)
                         cmd.Parameters.AddWithValue("@accountId", complaintDetail.AccountId);
                         cmd.Parameters.AddWithValue("@entityId", complaintDetail.EntityId);
                         cmd.Parameters.AddWithValue("@Description", "");
@@ -409,7 +409,7 @@ namespace MvcBrownListAPI
                     if (cnn.State == ConnectionState.Closed)
                         cnn.Open();
 
-                    cmd = new SqlCommand("sp_CreateComplaintMeToo", cnn);
+                    cmd = new SqlCommand("sp_Complaint_MeToo", cnn);
                     cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.AddWithValue("@complaintId", complaintDetail.ComplaintId);
                     cmd.Parameters.AddWithValue("@accountId", complaintDetail.AccountId);
@@ -470,7 +470,7 @@ namespace MvcBrownListAPI
                     if (cnn.State == ConnectionState.Closed)
                         cnn.Open();
 
-                    cmd = new SqlCommand("sp_CreateComplaintSupport", cnn);
+                    cmd = new SqlCommand("sp_Complaint_Support", cnn);
                     cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.AddWithValue("@complaintId", complaintDetail.ComplaintId);
                     cmd.Parameters.AddWithValue("@accountId", complaintDetail.AccountId);
@@ -531,7 +531,7 @@ namespace MvcBrownListAPI
                     if (cnn.State == ConnectionState.Closed)
                         cnn.Open();
 
-                    cmd = new SqlCommand("sp_CreateComplaintFollow", cnn);
+                    cmd = new SqlCommand("sp_Complaint_Follow", cnn);
                     cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.AddWithValue("@complaintId", complaintDetail.ComplaintId);
                     cmd.Parameters.AddWithValue("@accountId", complaintDetail.AccountId);
@@ -570,6 +570,69 @@ namespace MvcBrownListAPI
         }
 
         /// <summary>
+        /// To upload image/file based on Complaint
+        /// </summary>
+        /// <param name="jsonComplaintDetail"></param>
+        /// <returns></returns>
+        public RequestStatus complaintFileUpload(string jsonComplaintDetail)
+        {
+            RequestStatus requestStatus = new RequestStatus();
+
+            try
+            {
+                #region Convertion from JSON to Generic Object
+                ComplaintDetail complaintDetail = null;
+
+                if (!string.IsNullOrEmpty(jsonComplaintDetail))
+                    complaintDetail = new System.Web.Script.Serialization.JavaScriptSerializer().Deserialize<ComplaintDetail>(jsonComplaintDetail);
+                #endregion
+
+                if (complaintDetail != null)
+                {
+                    if (cnn.State == ConnectionState.Closed)
+                        cnn.Open();
+
+                    cmd = new SqlCommand("sp_Complaint_FileUpload", cnn);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@complaintId", complaintDetail.ComplaintId);
+                    cmd.Parameters.AddWithValue("@fileName", complaintDetail.UserFile.FileName);
+                    cmd.Parameters.AddWithValue("@extension", complaintDetail.UserFile.Extension);
+                    cmd.Parameters.AddWithValue("@fileContent", complaintDetail.UserFile.FileContent);
+
+                    var insertStatus = cmd.ExecuteScalar();
+
+                    if (insertStatus != null)
+                    {
+                        string statusString = (string)insertStatus;
+
+                        if (statusString.Contains("SUCCESS")) //successfully added complaint file entry
+                        {
+                            requestStatus.Code = AppConstants.SUCCESS_CODE;
+                            requestStatus.Message = AppConstants.SUCCESS_MESSAGE;
+                        }
+                        else
+                        {
+                            requestStatus.Code = AppConstants.FAILED_CODE;
+                            requestStatus.Message = AppConstants.FAILED_MESSAGE;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                requestStatus.Code = AppConstants.FATAL_ERROR_CODE;
+                requestStatus.Message = AppConstants.FATAL_ERROR_MESSAGE;
+                requestStatus.Data = "complaintFileUpload function : " + ex.Message.ToString();
+            }
+            finally
+            {
+                cnn.Close();
+            }
+
+            return requestStatus;
+        }
+
+        /// <summary>
         /// POST a new posting
         /// </summary>
         /// <param name="jsonPostingDetail"></param>
@@ -592,9 +655,9 @@ namespace MvcBrownListAPI
                     if (cnn.State == ConnectionState.Closed)
                         cnn.Open();
 
-                    cmd = new SqlCommand("sp_CreateNewPosting", cnn);
+                    cmd = new SqlCommand("sp_Posting_New", cnn);
                     cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.AddWithValue("@postingType", postingDetail.PostingType);
+                    cmd.Parameters.AddWithValue("@postingTypeId", postingDetail.PostingTypeId);
                     cmd.Parameters.AddWithValue("@complaintId", postingDetail.ComplaintId);
 
                     if (postingDetail.ParentPostingId == 0) //handling null value
@@ -662,7 +725,7 @@ namespace MvcBrownListAPI
                     if (cnn.State == ConnectionState.Closed)
                         cnn.Open();
 
-                    cmd = new SqlCommand("sp_CreatePostingLike", cnn);
+                    cmd = new SqlCommand("sp_Posting_Like", cnn);
                     cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.AddWithValue("@postingId", postingDetail.PostingId);
                     cmd.Parameters.AddWithValue("@accountId", postingDetail.AccountId);
@@ -691,6 +754,69 @@ namespace MvcBrownListAPI
                 requestStatus.Code = AppConstants.FATAL_ERROR_CODE;
                 requestStatus.Message = AppConstants.FATAL_ERROR_MESSAGE;
                 requestStatus.Data = "postingLike function : " + ex.Message.ToString();
+            }
+            finally
+            {
+                cnn.Close();
+            }
+
+            return requestStatus;
+        }
+
+        /// <summary>
+        /// To upload image/file based on Posting
+        /// </summary>
+        /// <param name="jsonPostingDetail"></param>
+        /// <returns></returns>
+        public RequestStatus postingFileUpload(string jsonPostingDetail)
+        {
+            RequestStatus requestStatus = new RequestStatus();
+
+            try
+            {
+                #region Convertion from JSON to Generic Object
+                PostingDetail postingDetail = null;
+
+                if (!string.IsNullOrEmpty(jsonPostingDetail))
+                    postingDetail = new System.Web.Script.Serialization.JavaScriptSerializer().Deserialize<PostingDetail>(jsonPostingDetail);
+                #endregion
+
+                if (postingDetail != null)
+                {
+                    if (cnn.State == ConnectionState.Closed)
+                        cnn.Open();
+
+                    cmd = new SqlCommand("sp_Posting_FileUpload", cnn);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@postingId", postingDetail.PostingId);
+                    cmd.Parameters.AddWithValue("@fileName", postingDetail.UserFile.FileName);
+                    cmd.Parameters.AddWithValue("@extension", postingDetail.UserFile.Extension);
+                    cmd.Parameters.AddWithValue("@fileContent", postingDetail.UserFile.FileContent);
+
+                    var insertStatus = cmd.ExecuteScalar();
+
+                    if (insertStatus != null)
+                    {
+                        string statusString = (string)insertStatus;
+
+                        if (statusString.Contains("SUCCESS")) //successfully added posting file entry
+                        {
+                            requestStatus.Code = AppConstants.SUCCESS_CODE;
+                            requestStatus.Message = AppConstants.SUCCESS_MESSAGE;
+                        }
+                        else
+                        {
+                            requestStatus.Code = AppConstants.FAILED_CODE;
+                            requestStatus.Message = AppConstants.FAILED_MESSAGE;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                requestStatus.Code = AppConstants.FATAL_ERROR_CODE;
+                requestStatus.Message = AppConstants.FATAL_ERROR_MESSAGE;
+                requestStatus.Data = "postingFileUpload function : " + ex.Message.ToString();
             }
             finally
             {

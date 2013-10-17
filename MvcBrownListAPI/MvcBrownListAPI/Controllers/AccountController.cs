@@ -99,6 +99,17 @@ namespace MvcBrownListAPI.Controllers
             clsDAL objDAL = new clsDAL();
             return objDAL.complaintFollow(jsonComplaintDetail).ToJSON();
         }
+
+        [HttpPost]
+        [HttpRoute("/1.0/Complaint/FileUpload")]
+        public string ComplaintFileUpload()
+        {
+            //Retrieve POST data
+            string jsonComplaintDetail = Request.Content.ReadAsStringAsync().Result;
+
+            clsDAL objDAL = new clsDAL();
+            return objDAL.complaintFileUpload(jsonComplaintDetail).ToJSON();
+        }
         #endregion
 
         #region Posting
@@ -122,6 +133,17 @@ namespace MvcBrownListAPI.Controllers
 
             clsDAL objDAL = new clsDAL();
             return objDAL.postingLike(jsonComplaintDetail).ToJSON();
+        }
+
+        [HttpPost]
+        [HttpRoute("/1.0/Posting/FileUpload")]
+        public string PostingFileUpload()
+        {
+            //Retrieve POST data
+            string jsonPostingDetail = Request.Content.ReadAsStringAsync().Result;
+
+            clsDAL objDAL = new clsDAL();
+            return objDAL.postingFileUpload(jsonPostingDetail).ToJSON();
         }
         #endregion
 

@@ -60,12 +60,13 @@ namespace MvcBrownListAPI
     public class PostingDetail
     {
         public int PostingId { get; set; }
-        public int PostingType { get; set; }
+        public int PostingTypeId { get; set; }
         public int ComplaintId { get; set; }
         public int ParentPostingId { get; set; }
         public int AccountId { get; set; }
         public int EntityId { get; set; }
         public string Description { get; set; }
+        public UserFile UserFile { get; set; }
     }
 
     public class AppConstants
